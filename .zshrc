@@ -116,3 +116,11 @@ alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 # export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
 
 
+
+# Created by `pipx` on 2022-12-14 12:33:00
+export PATH="$PATH:/Users/nathanieljoselson/.local/bin"
+
+autoload -Uz compinit
+zstyle ':completion:*' menu select
+fpath+=~/.zfunc
+

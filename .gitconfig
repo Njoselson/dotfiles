@@ -1,3 +1,7 @@
 [alias]
     lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --decorate=full
 
+[init]
+	defaultBranch = main
+[user]
+	email = nathaniel.joselson@gmail.com

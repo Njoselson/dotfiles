@@ -189,6 +189,7 @@ call plug#end()
 
 
 " MAPPINGS --------------------------------------------------------------- {{{
+" nnoremap <leader>p pgv"@=v:register.'y'<cr> 
 
 " remap escape
 inoremap jj <esc>
@@ -209,7 +210,7 @@ nnoremap L $
 map <leader>h :noh<CR>
 
 " toggle set paste and set nopaste
-map <leader>p :call TogglePaste()<cr>
+map <leader>P :call TogglePaste()<cr>
 
 " Nerdtree remappings
 map <leader>t :NERDTreeToggle<CR>
