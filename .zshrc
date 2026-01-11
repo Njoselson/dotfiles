@@ -2,7 +2,7 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="/Users/nathanieljoselson/.oh-my-zsh"
+export ZSH="$HOME/.oh-my-zsh"
 
 eval "$(pyenv init -)"
 
@@ -118,7 +118,7 @@ alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
 
 # Created by `pipx` on 2022-12-14 12:33:00
-export PATH="$PATH:/Users/nathanieljoselson/.local/bin"
+export PATH="$PATH:$HOME/.local/bin"
 
 autoload -Uz compinit
 zstyle ':completion:*' menu select
