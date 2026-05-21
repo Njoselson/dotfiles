@@ -5,22 +5,8 @@ set -euo pipefail
 # From the dotfiles dir: bash install.sh
 # Or remotely: bash <(curl -fsSL https://raw.githubusercontent.com/Njoselson/dotfiles/main/install.sh)
 
-DOTFILES="$(cd "$(dirname "$0")" && pwd)"
 VAULT_DIR="$HOME/Documents/obsidian"
 VAULT_REPO="git@github.com:Njoselson/obsidian-vault.git"
-
-link() {
-    local src="$1" dst="$2"
-    if [ -L "$dst" ]; then
-        rm "$dst"
-    elif [ -e "$dst" ]; then
-        echo "  backing up $dst -> ${dst}.bak"
-        mv "$dst" "${dst}.bak"
-    fi
-    mkdir -p "$(dirname "$dst")"
-    ln -s "$src" "$dst"
-    echo "  $dst -> $src"
-}
 
 echo "==> Checking for Xcode Command Line Tools..."
 xcode-select --install 2>/dev/null || true
@@ -65,18 +51,25 @@ if ! command -v claude &>/dev/null; then
 fi
 
 echo ""
-echo "=== Dotfiles ==="
-link "$DOTFILES/.tmux.conf"   "$HOME/.tmux.conf"
-link "$DOTFILES/.zshrc"       "$HOME/.zshrc"
-link "$DOTFILES/.bashrc"      "$HOME/.bashrc"
-link "$DOTFILES/.gitconfig"   "$HOME/.gitconfig"
-link "$DOTFILES/.vimrc"       "$HOME/.vimrc"
-link "$DOTFILES/.pdbrc.py"    "$HOME/.pdbrc.py"
-if [ -d "$DOTFILES/nvim" ]; then
-    link "$DOTFILES/nvim"     "$HOME/.config/nvim"
+echo "=== Dotfiles (bare git) ==="
+if [ ! -d "$HOME/.cfg" ]; then
+    git clone --bare git@github.com:Njoselson/dotfiles.git "$HOME/.cfg"
+    /usr/bin/git --git-dir="$HOME/.cfg/" --work-tree="$HOME" checkout
+    echo "  Dotfiles checked out to ~"
+else
+    echo "  ~/.cfg already exists — skipping"
 fi
-if [ -d "$DOTFILES/lazygit" ]; then
-    link "$DOTFILES/lazygit"  "$HOME/.config/lazygit"
+
+# nvim and lazygit configs live in the repo as directories; symlink if present
+if [ -d "$HOME/nvim" ] && [ ! -e "$HOME/.config/nvim" ]; then
+    mkdir -p "$HOME/.config"
+    ln -s "$HOME/nvim" "$HOME/.config/nvim"
+    echo "  ~/.config/nvim -> ~/nvim"
+fi
+if [ -d "$HOME/lazygit" ] && [ ! -e "$HOME/.config/lazygit" ]; then
+    mkdir -p "$HOME/.config"
+    ln -s "$HOME/lazygit" "$HOME/.config/lazygit"
+    echo "  ~/.config/lazygit -> ~/lazygit"
 fi
 
 echo ""
