@@ -15,7 +15,7 @@ return {
     },
   },
   {
-    "williamboman/mason-lspconfig.nvim",
+    "mason-org/mason-lspconfig.nvim",
     opts = function(_, opts)
       opts.ensure_installed = vim.tbl_filter(function(s)
         return s ~= "basedpyright" and s ~= "ruff"
