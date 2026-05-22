@@ -4,7 +4,11 @@
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
 
 set opt AUTO_CD
 
@@ -89,38 +93,25 @@ source $ZSH/oh-my-zsh.sh
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
 
-# Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='mvim'
-# fi
-
-# Compilation flags
-# export ARCHFLAGS="-arch x86_64"
-
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
 # For a full list of active aliases, run `alias`.
-#
-# Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
 alias x="exit"
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
-# Personal Changes!
+# FZF
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# FZF command includes hidden files
-# export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
+# uv
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
+# Editor
+export EDITOR=nvim
+export VISUAL=nvim
 
-
-# Created by `pipx` on 2022-12-14 12:33:00
 export PATH="$PATH:$HOME/.local/bin"
 
 autoload -Uz compinit
 zstyle ':completion:*' menu select
 fpath+=~/.zfunc
-
