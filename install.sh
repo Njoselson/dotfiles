@@ -7,6 +7,20 @@ set -euo pipefail
 
 VAULT_DIR="$HOME/Documents/obsidian"
 VAULT_REPO="git@github.com:Njoselson/obsidian-vault.git"
+DEV_STANDARDS="$HOME/code/eiq/development-standards"
+
+link() {
+    local src="$1" dst="$2"
+    if [ -L "$dst" ]; then
+        rm "$dst"
+    elif [ -e "$dst" ]; then
+        echo "    backing up $dst -> ${dst}.bak"
+        mv "$dst" "${dst}.bak"
+    fi
+    mkdir -p "$(dirname "$dst")"
+    ln -s "$src" "$dst"
+    echo "    $dst -> $src"
+}
 
 echo "==> Checking for Xcode Command Line Tools..."
 xcode-select --install 2>/dev/null || true
@@ -87,19 +101,66 @@ else
 fi
 
 echo ""
-echo "=== Claude Code skills ==="
-if [ -d "$VAULT_DIR/_claude" ]; then
-    mkdir -p "$HOME/.claude"
-    ln -sf "$VAULT_DIR/_claude/commands" "$HOME/.claude/commands"
-    ln -sf "$VAULT_DIR/_claude/skills"   "$HOME/.claude/skills"
-    echo "  Symlinked commands + skills from $VAULT_DIR/_claude"
+echo "=== Claude Code config ==="
+mkdir -p "$HOME/.claude/commands" "$HOME/.claude/skills" "$HOME/.claude/rules"
+
+# Vault commands (checkin, capture, session-close, etc.)
+if [ -d "$VAULT_DIR/_claude/commands" ]; then
+    echo "  Commands:"
+    for cmd in "$VAULT_DIR/_claude/commands"/*.md; do
+        [ -f "$cmd" ] || continue
+        link "$cmd" "$HOME/.claude/commands/$(basename "$cmd")"
+    done
+fi
+
+# Vault skills (obsidian-cli, commit-push-pr, etc.)
+if [ -d "$VAULT_DIR/_claude/skills" ]; then
+    echo "  Skills (vault):"
+    for skill_dir in "$VAULT_DIR/_claude/skills"/*/; do
+        [ -d "$skill_dir" ] || continue
+        name=$(basename "$skill_dir")
+        link "$skill_dir" "$HOME/.claude/skills/$name"
+    done
+fi
+
+# Dev-standards rules (PR format, Jira workflow, validation, etc.)
+if [ -d "$DEV_STANDARDS/.claude/rules" ]; then
+    echo "  Rules (dev-standards):"
+    for rule in "$DEV_STANDARDS/.claude/rules"/*.md; do
+        [ -f "$rule" ] || continue
+        link "$rule" "$HOME/.claude/rules/$(basename "$rule")"
+    done
 else
-    echo "  Vault not found at $VAULT_DIR — re-run after vault clones"
+    echo "  SKIP: dev-standards not found at $DEV_STANDARDS"
+    echo "  (clone it or update DEV_STANDARDS path in install.sh)"
+fi
+
+# Dev-standards skills
+if [ -d "$DEV_STANDARDS" ]; then
+    echo "  Skills (dev-standards):"
+    for dir in "$DEV_STANDARDS"/community/wc/skills/*/ "$DEV_STANDARDS"/ai/skills/*/; do
+        [ -d "$dir" ] || continue
+        name=$(basename "$dir")
+        [ -f "$dir/SKILL.md" ] || continue
+        # Don't overwrite vault skills
+        [ -L "$HOME/.claude/skills/$name" ] && continue
+        link "$dir" "$HOME/.claude/skills/$name"
+    done
+fi
+
+# Memory: symlink Claude's auto-memory path to vault memory
+if [ -d "$VAULT_DIR/_claude/memory" ]; then
+    VAULT_ENCODED=$(echo "$VAULT_DIR" | sed 's|^/||; s|/|-|g')
+    CLAUDE_MEM_DIR="$HOME/.claude/projects/-${VAULT_ENCODED}/memory"
+    echo "  Memory:"
+    mkdir -p "$(dirname "$CLAUDE_MEM_DIR")"
+    link "$VAULT_DIR/_claude/memory" "$CLAUDE_MEM_DIR"
 fi
 
 echo ""
 echo "Done."
 echo "  Reload tmux:        tmux source-file ~/.tmux.conf"
 echo "  First nvim launch:  auto-installs plugins (~30s)"
+echo "  Run 'claude' from $VAULT_DIR for planning/check-ins."
 echo "  See SETUP.md in the vault for MCP auth (Jira, Google Calendar, etc.)"
 echo "  Restart shell:      exec zsh"
