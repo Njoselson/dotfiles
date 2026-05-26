@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# New Mac bootstrap script
-# From the dotfiles dir: bash install.sh
-# Or remotely: bash <(curl -fsSL https://raw.githubusercontent.com/Njoselson/dotfiles/main/install.sh)
+# Cross-platform bootstrap script
+#
+# Full setup (Mac):   bash install.sh
+# VM setup (Linux):   bash install.sh
+# Claude-only:        bash install.sh --claude-only
+#
+# On Mac: installs packages, dotfiles, vault, Claude Code config
+# On Linux: installs Claude Code, vault, Claude Code config (skips Homebrew/Obsidian)
 
 VAULT_DIR="$HOME/Documents/obsidian"
 VAULT_REPO="git@github.com:Njoselson/obsidian-vault.git"
 DEV_STANDARDS="$HOME/code/eiq/development-standards"
+PLATFORM="$(uname -s)"
+CLAUDE_ONLY=false
+
+if [[ "${1:-}" == "--claude-only" ]]; then
+    CLAUDE_ONLY=true
+fi
 
 link() {
     local src="$1" dst="$2"
@@ -22,70 +33,79 @@ link() {
     echo "    $dst -> $src"
 }
 
-echo "==> Checking for Xcode Command Line Tools..."
-xcode-select --install 2>/dev/null || true
+# --- Mac-only setup ---
+if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
+    echo "==> Checking for Xcode Command Line Tools..."
+    xcode-select --install 2>/dev/null || true
 
-echo "==> Installing Homebrew..."
-if ! command -v brew &>/dev/null; then
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo "==> Installing Homebrew..."
+    if ! command -v brew &>/dev/null; then
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+
+    echo "==> Installing Homebrew packages..."
+    brew install \
+        git \
+        gh \
+        tmux \
+        neovim \
+        pyenv \
+        poetry \
+        node \
+        docker \
+        fzf
+
+    echo "==> Installing oh-my-zsh..."
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    fi
+
+    echo "==> Installing zsh plugins..."
+    ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+    [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && \
+        git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+    [ ! -d "$ZSH_CUSTOM/plugins/zsh-vi-mode" ] && \
+        git clone https://github.com/jeffreytse/zsh-vi-mode "$ZSH_CUSTOM/plugins/zsh-vi-mode"
 fi
 
-echo "==> Installing Homebrew packages..."
-brew install \
-    git \
-    gh \
-    tmux \
-    neovim \
-    pyenv \
-    poetry \
-    node \
-    docker \
-    fzf
+# --- Cross-platform tools ---
+if [[ "$CLAUDE_ONLY" == false ]]; then
+    echo "==> Installing uv..."
+    if ! command -v uv &>/dev/null; then
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    fi
 
-echo "==> Installing oh-my-zsh..."
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    echo "==> Installing Claude Code..."
+    if ! command -v claude &>/dev/null; then
+        npm install -g @anthropic-ai/claude-code
+    fi
 fi
 
-echo "==> Installing zsh plugins..."
-ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && \
-    git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-vi-mode" ] && \
-    git clone https://github.com/jeffreytse/zsh-vi-mode "$ZSH_CUSTOM/plugins/zsh-vi-mode"
+# --- Dotfiles (bare git) — Mac only ---
+if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
+    echo ""
+    echo "=== Dotfiles (bare git) ==="
+    if [ ! -d "$HOME/.cfg" ]; then
+        git clone --bare git@github.com:Njoselson/dotfiles.git "$HOME/.cfg"
+        /usr/bin/git --git-dir="$HOME/.cfg/" --work-tree="$HOME" checkout
+        echo "  Dotfiles checked out to ~"
+    else
+        echo "  ~/.cfg already exists — skipping"
+    fi
 
-echo "==> Installing uv..."
-if ! command -v uv &>/dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    if [ -d "$HOME/nvim" ] && [ ! -e "$HOME/.config/nvim" ]; then
+        mkdir -p "$HOME/.config"
+        ln -s "$HOME/nvim" "$HOME/.config/nvim"
+        echo "  ~/.config/nvim -> ~/nvim"
+    fi
+    if [ -d "$HOME/lazygit" ] && [ ! -e "$HOME/.config/lazygit" ]; then
+        mkdir -p "$HOME/.config"
+        ln -s "$HOME/lazygit" "$HOME/.config/lazygit"
+        echo "  ~/.config/lazygit -> ~/lazygit"
+    fi
 fi
 
-echo "==> Installing Claude Code..."
-if ! command -v claude &>/dev/null; then
-    npm install -g @anthropic-ai/claude-code
-fi
-
-echo ""
-echo "=== Dotfiles (bare git) ==="
-if [ ! -d "$HOME/.cfg" ]; then
-    git clone --bare git@github.com:Njoselson/dotfiles.git "$HOME/.cfg"
-    /usr/bin/git --git-dir="$HOME/.cfg/" --work-tree="$HOME" checkout
-    echo "  Dotfiles checked out to ~"
-else
-    echo "  ~/.cfg already exists — skipping"
-fi
-
-# nvim and lazygit configs live in the repo as directories; symlink if present
-if [ -d "$HOME/nvim" ] && [ ! -e "$HOME/.config/nvim" ]; then
-    mkdir -p "$HOME/.config"
-    ln -s "$HOME/nvim" "$HOME/.config/nvim"
-    echo "  ~/.config/nvim -> ~/nvim"
-fi
-if [ -d "$HOME/lazygit" ] && [ ! -e "$HOME/.config/lazygit" ]; then
-    mkdir -p "$HOME/.config"
-    ln -s "$HOME/lazygit" "$HOME/.config/lazygit"
-    echo "  ~/.config/lazygit -> ~/lazygit"
-fi
-
+# --- Obsidian vault ---
 echo ""
 echo "=== Obsidian vault ==="
 if [ -d "$VAULT_DIR/.git" ]; then
@@ -100,6 +120,7 @@ else
     git clone "$VAULT_REPO" "$VAULT_DIR"
 fi
 
+# --- Claude Code config ---
 echo ""
 echo "=== Claude Code config ==="
 mkdir -p "$HOME/.claude/commands" "$HOME/.claude/skills" "$HOME/.claude/rules"
@@ -159,8 +180,10 @@ fi
 
 echo ""
 echo "Done."
-echo "  Reload tmux:        tmux source-file ~/.tmux.conf"
-echo "  First nvim launch:  auto-installs plugins (~30s)"
+if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
+    echo "  Reload tmux:        tmux source-file ~/.tmux.conf"
+    echo "  First nvim launch:  auto-installs plugins (~30s)"
+fi
 echo "  Run 'claude' from $VAULT_DIR for planning/check-ins."
 echo "  See SETUP.md in the vault for MCP auth (Jira, Google Calendar, etc.)"
 echo "  Restart shell:      exec zsh"
