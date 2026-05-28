@@ -26,6 +26,7 @@ fi
 # --- Editor ---
 export EDITOR=nvim
 export VISUAL=nvim
+alias vim="nvim"
 
 # --- Aliases ---
 alias x="exit"
