@@ -99,9 +99,9 @@ vm-fwd-status() {
 alias vm-ssh="ssh -X ${VM_DEV}"
 alias vm-stg-ssh="ssh -X ${VM_STG}"
 alias vm-gpu-ssh="ssh -X ${VM_GPU}"
-alias vm-cpu="ssh -t ${VM_DEV} 'tmux attach -t cpu_tmux || tmux new -s cpu_tmux'"
-alias vm-stg-cpu="ssh -t ${VM_STG} 'tmux attach -t cpu_tmux || tmux new -s cpu_tmux'"
-alias vm-gpu-cpu="ssh -t ${VM_GPU} 'tmux attach -t cpu_tmux || tmux new -s cpu_tmux'"
+alias vm-cpu="ssh -t ${VM_DEV} 'zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\"'"
+alias vm-stg-cpu="ssh -t ${VM_STG} 'zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\"'"
+alias vm-gpu-cpu="ssh -t ${VM_GPU} 'zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\"'"
 
 # --- One-command workflows (start VM + wait + forward + tmux) ---
 vm__wait_ssh() {
@@ -117,11 +117,11 @@ ensure-fwd()     { lsof -nPi :3000 >/dev/null 2>&1 || { echo "Starting 3000/8080
 ensure-fwd-stg() { lsof -nPi :3001 >/dev/null 2>&1 || { echo "Starting 3001/8081"; vm-fwd-stg; }; }
 ensure-fwd-gpu() { lsof -nPi :3002 >/dev/null 2>&1 || { echo "Starting 3002/8082"; vm-fwd-gpu; }; }
 
-alias vm-work='vm-start && vm__wait_ssh "${VM_DEV}" && ensure-fwd && ssh -t ${VM_DEV} "tmux attach -t cpu_tmux || tmux new -s cpu_tmux"'
-alias vm-work-stg='vm-stg-start && vm__wait_ssh "${VM_STG}" && ensure-fwd-stg && ssh -t ${VM_STG} "tmux attach -t cpu_tmux || tmux new -s cpu_tmux"'
-alias vm-work-gpu='vm-gpu-start && vm__wait_ssh "${VM_GPU}" && ensure-fwd-gpu && ssh -t ${VM_GPU} "tmux attach -t cpu_tmux || tmux new -s cpu_tmux"'
-alias vm-work-ca='ca-start && vm__wait_ssh "${VM_CA}" && ssh -t ${VM_CA} "tmux attach -t cpu_tmux || tmux new -s cpu_tmux"'
-alias work-claimsvm='claims-start && vm__wait_ssh "${VM_CLAIMS}" && ssh -t ${VM_CLAIMS} "tmux attach -t cpu_tmux || tmux new -s cpu_tmux"'
+alias vm-work='vm-start && vm__wait_ssh "${VM_DEV}" && ensure-fwd && ssh -t ${VM_DEV} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
+alias vm-work-stg='vm-stg-start && vm__wait_ssh "${VM_STG}" && ensure-fwd-stg && ssh -t ${VM_STG} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
+alias vm-work-gpu='vm-gpu-start && vm__wait_ssh "${VM_GPU}" && ensure-fwd-gpu && ssh -t ${VM_GPU} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
+alias vm-work-ca='ca-start && vm__wait_ssh "${VM_CA}" && ssh -t ${VM_CA} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
+alias work-claimsvm='claims-start && vm__wait_ssh "${VM_CLAIMS}" && ssh -t ${VM_CLAIMS} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
 
 # --- FZF ---
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
