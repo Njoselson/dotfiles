@@ -56,6 +56,10 @@ if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
         docker \
         fzf
 
+fi
+
+# --- oh-my-zsh + plugins (cross-platform) ---
+if [[ "$CLAUDE_ONLY" == false ]]; then
     echo "==> Installing oh-my-zsh..."
     if [ ! -d "$HOME/.oh-my-zsh" ]; then
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
