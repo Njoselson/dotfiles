@@ -14,12 +14,14 @@ if command -v pyenv &>/dev/null; then
     eval "$(pyenv virtualenv-init -)"
 fi
 
-# --- oh-my-zsh ---
-export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="robbyrussell"
-plugins=(zsh-autosuggestions zsh-vi-mode git)
-autoload -U compinit && compinit
-source $ZSH/oh-my-zsh.sh
+# --- oh-my-zsh (optional — skipped if not installed) ---
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    export ZSH="$HOME/.oh-my-zsh"
+    ZSH_THEME="robbyrussell"
+    plugins=(zsh-autosuggestions zsh-vi-mode git)
+    autoload -U compinit && compinit
+    source $ZSH/oh-my-zsh.sh
+fi
 
 # --- Editor ---
 export EDITOR=nvim
