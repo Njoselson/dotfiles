@@ -10,6 +10,7 @@ set -euo pipefail
 # On Mac: installs packages, dotfiles, vault, Claude Code config
 # On Linux: installs Claude Code, vault, Claude Code config (skips Homebrew/Obsidian)
 
+DOTFILES_DIR="$HOME/dotfiles"
 VAULT_DIR="$HOME/Documents/obsidian"
 VAULT_REPO="git@github.com:Njoselson/obsidian-vault.git"
 DEV_STANDARDS="$HOME/code/eiq/development-standards"
@@ -81,27 +82,57 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
     fi
 fi
 
-# --- Dotfiles (bare git) — Mac only ---
-if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
+# --- Dotfiles (symlinks) ---
+if [[ "$CLAUDE_ONLY" == false ]]; then
     echo ""
-    echo "=== Dotfiles (bare git) ==="
-    if [ ! -d "$HOME/.cfg" ]; then
-        git clone --bare git@github.com:Njoselson/dotfiles.git "$HOME/.cfg"
-        /usr/bin/git --git-dir="$HOME/.cfg/" --work-tree="$HOME" checkout
-        echo "  Dotfiles checked out to ~"
-    else
-        echo "  ~/.cfg already exists — skipping"
+    echo "=== Dotfiles (symlinks) ==="
+
+    # Clone dotfiles repo if needed
+    if [ ! -d "$DOTFILES_DIR/.git" ]; then
+        echo "  Cloning dotfiles repo..."
+        git clone git@github.com:njoselson/dotfiles.git "$DOTFILES_DIR"
     fi
 
-    if [ -d "$HOME/nvim" ] && [ ! -e "$HOME/.config/nvim" ]; then
-        mkdir -p "$HOME/.config"
-        ln -s "$HOME/nvim" "$HOME/.config/nvim"
-        echo "  ~/.config/nvim -> ~/nvim"
+    # Core dotfiles
+    link "$DOTFILES_DIR/.zshrc"      "$HOME/.zshrc"
+    link "$DOTFILES_DIR/.tmux.conf"  "$HOME/.tmux.conf"
+    link "$DOTFILES_DIR/.vimrc"      "$HOME/.vimrc"
+    link "$DOTFILES_DIR/.gitconfig"  "$HOME/.gitconfig"
+    link "$DOTFILES_DIR/.bashrc"     "$HOME/.bashrc"
+    link "$DOTFILES_DIR/.pdbrc.py"   "$HOME/.pdbrc.py"
+
+    # Config dirs
+    if [ -d "$DOTFILES_DIR/nvim" ]; then
+        link "$DOTFILES_DIR/nvim" "$HOME/.config/nvim"
     fi
-    if [ -d "$HOME/lazygit" ] && [ ! -e "$HOME/.config/lazygit" ]; then
-        mkdir -p "$HOME/.config"
-        ln -s "$HOME/lazygit" "$HOME/.config/lazygit"
-        echo "  ~/.config/lazygit -> ~/lazygit"
+    if [ -d "$DOTFILES_DIR/lazygit" ]; then
+        link "$DOTFILES_DIR/lazygit" "$HOME/.config/lazygit"
+    fi
+    if [ -d "$DOTFILES_DIR/Obsidian" ]; then
+        link "$DOTFILES_DIR/Obsidian" "$HOME/.config/obsidian"
+    fi
+
+    # Create .zshrc.local template if it doesn't exist
+    if [ ! -f "$HOME/.zshrc.local" ]; then
+        echo "  Creating ~/.zshrc.local template (fill in your secrets)"
+        cat > "$HOME/.zshrc.local" <<'LOCALEOF'
+# Machine-local secrets — NOT committed to dotfiles
+# Fill in values for this machine.
+
+# Claude Code (Vertex)
+# export CLAUDE_CODE_USE_VERTEX=1
+# export CLOUD_ML_REGION=us-east5
+# export ANTHROPIC_VERTEX_PROJECT_ID=eiq-dev-dte
+
+# W&B
+# export WANDB_BASE_URL="https://wandb.evolutioniq.com"
+# export WANDB_API_KEY="your-key-here"
+
+# gws (Google Workspace CLI)
+# export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE="$HOME/.config/gws/credentials.json"
+LOCALEOF
+    else
+        echo "  ~/.zshrc.local already exists — skipping"
     fi
 fi
 
@@ -186,4 +217,5 @@ if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
 fi
 echo "  Run 'claude' from $VAULT_DIR for planning/check-ins."
 echo "  See SETUP.md in the vault for MCP auth (Jira, Google Calendar, etc.)"
+echo "  Edit ~/.zshrc.local for machine-specific secrets."
 echo "  Restart shell:      exec zsh"

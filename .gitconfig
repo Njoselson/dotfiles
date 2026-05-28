@@ -1,7 +1,16 @@
+[user]
+	email = nathaniel.joselson@evolutioniq.com
+	name = Nathaniel Joselson
 [alias]
-    lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --decorate=full
+	lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --decorate=full
 	stoic = !git commit -m \"$(curl  https://stoicquotesapi.com/v1/api/quotes/random | jq '.body')\"
 [init]
 	defaultBranch = main
-[user]
-	email = nathaniel.joselson@gmail.com
+[credential "https://github.com"]
+	helper =
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[include]
+	path = ~/.gitconfig.local
