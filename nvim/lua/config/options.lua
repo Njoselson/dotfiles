@@ -9,9 +9,6 @@ vim.g.clipboard = {
   copy = { ["+"] = osc52.copy("+"), ["*"] = osc52.copy("*") },
   paste = { ["+"] = osc52.paste("+"), ["*"] = osc52.paste("*") },
 }
--- LazyVim disables clipboard over SSH; override after it loads
-vim.api.nvim_create_autocmd("User", {
-  pattern = "VeryLazy",
-  once = true,
-  callback = function() vim.o.clipboard = "unnamedplus" end,
-})
+-- Force unnamedplus before LazyVim captures it (LazyVim blanks it on SSH_CONNECTION)
+vim.o.clipboard = "unnamedplus"
+vim.env.SSH_CONNECTION = nil
