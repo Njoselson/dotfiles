@@ -61,6 +61,23 @@ if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
 
 fi
 
+# --- Linux dev tools (fzf, fd, ripgrep, tree-sitter) ---
+if [[ "$PLATFORM" == "Linux" && "$CLAUDE_ONLY" == false ]]; then
+    echo "==> Installing Linux dev tools..."
+    sudo apt-get install -y fzf fd-find ripgrep > /dev/null 2>&1
+    # fd is installed as fdfind on Debian — alias it
+    [ ! -L /usr/local/bin/fd ] && [ -x /usr/bin/fdfind ] && sudo ln -s /usr/bin/fdfind /usr/local/bin/fd
+
+    # tree-sitter CLI for nvim-treesitter parser compilation
+    if ! command -v tree-sitter &>/dev/null; then
+        if command -v npm &>/dev/null; then
+            npm install -g tree-sitter-cli
+        else
+            echo "    SKIP: tree-sitter-cli (npm not found)"
+        fi
+    fi
+fi
+
 # --- oh-my-zsh + plugins (cross-platform) ---
 if [[ "$CLAUDE_ONLY" == false ]]; then
     echo "==> Installing oh-my-zsh..."
