@@ -76,6 +76,27 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
         git clone https://github.com/jeffreytse/zsh-vi-mode "$ZSH_CUSTOM/plugins/zsh-vi-mode"
 fi
 
+# --- tmux (Linux: build from source if <3.4, Mac: already via Homebrew) ---
+if [[ "$PLATFORM" == "Linux" && "$CLAUDE_ONLY" == false ]]; then
+    echo "==> Checking tmux..."
+    TMUX_MIN="3.4"
+    TMUX_VER="$(tmux -V 2>/dev/null | grep -oP '[\d.]+')"
+    if [[ -z "$TMUX_VER" || "$(printf '%s\n' "$TMUX_MIN" "$TMUX_VER" | sort -V | head -1)" != "$TMUX_MIN" ]]; then
+        echo "    tmux $TMUX_VER < $TMUX_MIN — building from source..."
+        sudo apt-get install -y libevent-dev ncurses-dev build-essential bison pkg-config > /dev/null 2>&1
+        TMUX_TAG="$(curl -s https://api.github.com/repos/tmux/tmux/releases/latest | grep -oP '"tag_name": "\K[^"]+')"
+        cd /tmp
+        curl -Lo tmux.tar.gz "https://github.com/tmux/tmux/releases/download/${TMUX_TAG}/tmux-${TMUX_TAG#v}.tar.gz"
+        tar xzf tmux.tar.gz
+        cd "tmux-${TMUX_TAG#v}"
+        ./configure > /dev/null 2>&1 && make -j"$(nproc)" > /dev/null 2>&1 && sudo make install > /dev/null 2>&1
+        cd /tmp && rm -rf tmux.tar.gz "tmux-${TMUX_TAG#v}"
+        echo "    Installed $(tmux -V)"
+    else
+        echo "    Already tmux $TMUX_VER"
+    fi
+fi
+
 # --- Neovim (Linux: appimage, Mac: already via Homebrew) ---
 if [[ "$PLATFORM" == "Linux" && "$CLAUDE_ONLY" == false ]]; then
     echo "==> Installing/upgrading Neovim..."
