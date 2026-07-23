@@ -87,10 +87,19 @@ if [[ "$PLATFORM" == "Linux" && "$CLAUDE_ONLY" == false ]]; then
         needs_install=true
     fi
     if $needs_install; then
-        curl -Lo /tmp/nvim-linux-x86_64.appimage https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
-        chmod u+x /tmp/nvim-linux-x86_64.appimage
-        sudo mv /tmp/nvim-linux-x86_64.appimage /usr/local/bin/nvim
-        echo "    Installed $(nvim --version | head -1)"
+        curl -Lo /tmp/nvim.appimage https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
+        chmod u+x /tmp/nvim.appimage
+        if /tmp/nvim.appimage --version &>/dev/null; then
+            sudo mv /tmp/nvim.appimage /usr/local/bin/nvim
+        else
+            # No FUSE — extract appimage
+            cd /tmp && ./nvim.appimage --appimage-extract > /dev/null 2>&1
+            sudo rm -rf /opt/nvim-appimage
+            sudo mv squashfs-root /opt/nvim-appimage
+            sudo ln -sf /opt/nvim-appimage/usr/bin/nvim /usr/local/bin/nvim
+            rm /tmp/nvim.appimage
+        fi
+        echo "    Installed $(/usr/local/bin/nvim --version | head -1)"
     else
         echo "    Already $(nvim --version | head -1)"
     fi
