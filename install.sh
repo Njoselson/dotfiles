@@ -68,13 +68,12 @@ if [[ "$PLATFORM" == "Linux" && "$CLAUDE_ONLY" == false ]]; then
     # fd is installed as fdfind on Debian — alias it
     [ ! -L /usr/local/bin/fd ] && [ -x /usr/bin/fdfind ] && sudo ln -s /usr/bin/fdfind /usr/local/bin/fd
 
-    # tree-sitter CLI for nvim-treesitter parser compilation
+    # tree-sitter CLI for nvim-treesitter parser compilation (v0.24.x works with glibc 2.36)
     if ! command -v tree-sitter &>/dev/null; then
-        if command -v npm &>/dev/null; then
-            npm install -g tree-sitter-cli
-        else
-            echo "    SKIP: tree-sitter-cli (npm not found)"
-        fi
+        curl -sL https://github.com/tree-sitter/tree-sitter/releases/download/v0.24.7/tree-sitter-linux-x64.gz | gunzip > /tmp/tree-sitter
+        chmod +x /tmp/tree-sitter
+        sudo mv /tmp/tree-sitter /usr/local/bin/tree-sitter
+        echo "    Installed tree-sitter $(/usr/local/bin/tree-sitter --version | awk '{print $2}')"
     fi
 fi
 
