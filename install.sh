@@ -76,6 +76,26 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
         git clone https://github.com/jeffreytse/zsh-vi-mode "$ZSH_CUSTOM/plugins/zsh-vi-mode"
 fi
 
+# --- Neovim (Linux: appimage, Mac: already via Homebrew) ---
+if [[ "$PLATFORM" == "Linux" && "$CLAUDE_ONLY" == false ]]; then
+    echo "==> Installing/upgrading Neovim..."
+    NVIM_MIN="0.10.0"
+    needs_install=false
+    if ! command -v nvim &>/dev/null; then
+        needs_install=true
+    elif [[ "$(nvim --version | head -1 | grep -oP '\d+\.\d+\.\d+')" < "$NVIM_MIN" ]]; then
+        needs_install=true
+    fi
+    if $needs_install; then
+        curl -Lo /tmp/nvim-linux-x86_64.appimage https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
+        chmod u+x /tmp/nvim-linux-x86_64.appimage
+        sudo mv /tmp/nvim-linux-x86_64.appimage /usr/local/bin/nvim
+        echo "    Installed $(nvim --version | head -1)"
+    else
+        echo "    Already $(nvim --version | head -1)"
+    fi
+fi
+
 # --- Cross-platform tools ---
 if [[ "$CLAUDE_ONLY" == false ]]; then
     echo "==> Installing uv..."
