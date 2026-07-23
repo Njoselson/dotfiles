@@ -11,7 +11,7 @@ set -euo pipefail
 # On Linux: installs Claude Code, vault, Claude Code config (skips Homebrew/Obsidian)
 
 DOTFILES_DIR="$HOME/dotfiles"
-VAULT_DIR="$HOME/Documents/obsidian"
+VAULT_DIR="$HOME/obsidian"
 VAULT_REPO="git@github.com:Njoselson/obsidian-vault.git"
 DEV_STANDARDS="$HOME/code/eiq/development-standards"
 PLATFORM="$(uname -s)"
@@ -54,7 +54,10 @@ if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
         poetry \
         node \
         docker \
-        fzf
+        fzf \
+        fd \
+        ripgrep \
+        delta
 
 fi
 
@@ -160,16 +163,14 @@ echo ""
 echo "=== Claude Code config ==="
 mkdir -p "$HOME/.claude/commands" "$HOME/.claude/skills" "$HOME/.claude/rules"
 
-# Vault commands (checkin, capture, session-close, etc.)
-if [ -d "$VAULT_DIR/_claude/commands" ]; then
-    echo "  Commands:"
-    for cmd in "$VAULT_DIR/_claude/commands"/*.md; do
-        [ -f "$cmd" ] || continue
-        link "$cmd" "$HOME/.claude/commands/$(basename "$cmd")"
-    done
+# Project-level .claude symlink: vault tracks config in _claude/ (git-friendly name)
+# but Claude Code reads .claude/ — symlink bridges the two
+if [ -d "$VAULT_DIR/_claude" ]; then
+    echo "  Project config:"
+    link "$VAULT_DIR/_claude" "$VAULT_DIR/.claude"
 fi
 
-# Vault skills (obsidian-cli, commit-push-pr, etc.)
+# Vault skills (morning, checkin, session-close, obsidian-cli, etc.)
 if [ -d "$VAULT_DIR/_claude/skills" ]; then
     echo "  Skills (vault):"
     for skill_dir in "$VAULT_DIR/_claude/skills"/*/; do

@@ -19,7 +19,8 @@ if [ -d "$HOME/.oh-my-zsh" ]; then
     export ZSH="$HOME/.oh-my-zsh"
     ZSH_THEME="robbyrussell"
     plugins=(zsh-autosuggestions zsh-vi-mode git)
-    autoload -U compinit && compinit
+    zstyle ':completion:*' menu select
+    fpath+=~/.zfunc
     source $ZSH/oh-my-zsh.sh
 fi
 
@@ -45,6 +46,7 @@ VM_STG=nate_stage_vm
 VM_GPU=nate_gpu_vm
 VM_CA=nate_ca_vm
 VM_CLAIMS=nate_claims_vm
+VM_SHR=nate_shr_vm
 
 # --- VM lifecycle ---
 alias vm-start="gcloud compute instances start eiq-dev-vm-nathaniel-joselson-standard-1 --zone=us-east4-a --project=eiq-development"
@@ -57,6 +59,8 @@ alias ca-start="gcloud compute instances start eiq-ca-dev-vm-nathaniel-joselson-
 alias ca-stop="gcloud compute instances stop eiq-ca-dev-vm-nathaniel-joselson-7c17 --zone=northamerica-northeast1-b --project=eiq-ca-development"
 alias claims-start="gcloud compute instances start claims-llm-training-4gpu --zone=us-central1-f --project=eiq-development"
 alias claims-stop="gcloud compute instances stop claims-llm-training-4gpu --zone=us-central1-f --project=eiq-development"
+alias shr-start="gcloud compute instances start eiq-us-shr-vm-nathaniel-joselson-b569 --zone=us-east4-a --project=eiq-us-shr-developer-vms"
+alias shr-stop="gcloud compute instances stop eiq-us-shr-vm-nathaniel-joselson-b569 --zone=us-east4-a --project=eiq-us-shr-developer-vms"
 
 # --- Background port forwards (unique local ports per VM) ---
 alias vm-fwd='autossh -M 0 -f -N -L 3000:localhost:3000 -L 8080:localhost:8080 ${VM_DEV}'
@@ -99,6 +103,7 @@ vm-fwd-status() {
 alias vm-ssh="ssh -X ${VM_DEV}"
 alias vm-stg-ssh="ssh -X ${VM_STG}"
 alias vm-gpu-ssh="ssh -X ${VM_GPU}"
+alias vm-shr-ssh="ssh -X ${VM_SHR}"
 alias vm-cpu="ssh -t ${VM_DEV} 'zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\"'"
 alias vm-stg-cpu="ssh -t ${VM_STG} 'zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\"'"
 alias vm-gpu-cpu="ssh -t ${VM_GPU} 'zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\"'"
@@ -122,17 +127,21 @@ alias vm-work-stg='vm-stg-start && vm__wait_ssh "${VM_STG}" && ensure-fwd-stg &&
 alias vm-work-gpu='vm-gpu-start && vm__wait_ssh "${VM_GPU}" && ensure-fwd-gpu && ssh -t ${VM_GPU} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
 alias vm-work-ca='ca-start && vm__wait_ssh "${VM_CA}" && ssh -t ${VM_CA} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
 alias work-claimsvm='claims-start && vm__wait_ssh "${VM_CLAIMS}" && ssh -t ${VM_CLAIMS} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
+alias vm-work-shr='shr-start && vm__wait_ssh "${VM_SHR}" && ssh -t ${VM_SHR} "zsh -lc \"tmux attach -t cpu_tmux || tmux new -s cpu_tmux\""'
 
-# --- FZF ---
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# --- Ephemeral app SOCKS5 proxy (proxied Chrome for *.eiqinternal.com) ---
+alias shr-proxy='ssh -D 8080 -N -f ${VM_SHR} && echo "SOCKS5 proxy on localhost:8080"'
+alias shr-proxy-stop='pkill -f "ssh .* -D 8080" || true'
+alias shr-chrome='open -na "Google Chrome" --args --user-data-dir=/tmp/chrome-proxy --proxy-server="socks5://localhost:8080" --host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE localhost"'
+
+# --- fzf (shell keybindings: C-r history, C-t file, M-c cd) ---
+if command -v fzf &>/dev/null; then
+    source <(fzf --zsh 2>/dev/null) || true
+fi
 
 # --- uv ---
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
-# --- Completion ---
-autoload -Uz compinit
-zstyle ':completion:*' menu select
-fpath+=~/.zfunc
-
 # --- Local overrides (secrets, machine-specific) ---
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
+ulimit -n 2147483646
