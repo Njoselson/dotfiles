@@ -181,6 +181,10 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
     if [ -d "$DOTFILES_DIR/lazygit" ]; then
         link "$DOTFILES_DIR/lazygit" "$HOME/.config/lazygit"
     fi
+    if [ -f "$DOTFILES_DIR/hunk/config.toml" ]; then
+        mkdir -p "$HOME/.config/hunk"
+        link "$DOTFILES_DIR/hunk/config.toml" "$HOME/.config/hunk/config.toml"
+    fi
     if [ -d "$DOTFILES_DIR/Obsidian" ]; then
         link "$DOTFILES_DIR/Obsidian" "$HOME/.config/obsidian"
     fi
