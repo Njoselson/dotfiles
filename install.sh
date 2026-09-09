@@ -173,6 +173,11 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
     link "$DOTFILES_DIR/.gitconfig"  "$HOME/.gitconfig"
     link "$DOTFILES_DIR/.bashrc"     "$HOME/.bashrc"
     link "$DOTFILES_DIR/.pdbrc.py"   "$HOME/.pdbrc.py"
+    if [ -f "$DOTFILES_DIR/ssh_config" ]; then
+        mkdir -p "$HOME/.ssh/cm"
+        chmod 700 "$HOME/.ssh"
+        link "$DOTFILES_DIR/ssh_config" "$HOME/.ssh/config"
+    fi
 
     # Config dirs
     if [ -d "$DOTFILES_DIR/nvim" ]; then

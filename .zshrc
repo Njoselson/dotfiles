@@ -84,12 +84,9 @@ alias vm-fwd-gpu-stop='ssh -O exit ${VM_GPU} || true'
 port() { lsof -nPi :"$1" 2>/dev/null | sed -n '1,10p'; }
 
 kill-fwd() {
-    pkill -f "ssh .* -L 3000:localhost:3000" || true
-    pkill -f "ssh .* -L 8080:localhost:8080" || true
-    pkill -f "ssh .* -L 3001:localhost:3000" || true
-    pkill -f "ssh .* -L 8081:localhost:8080" || true
-    pkill -f "ssh .* -L 3002:localhost:3000" || true
-    pkill -f "ssh .* -L 8082:localhost:8080" || true
+    for h in ${VM_DEV} ${VM_STG} ${VM_GPU}; do
+        ssh -O exit "$h" 2>/dev/null || true
+    done
 }
 
 vm-fwd-status() {
@@ -144,4 +141,4 @@ fi
 
 # --- Local overrides (secrets, machine-specific) ---
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
-ulimit -n 2147483646
+[[ "$(uname)" == "Darwin" ]] && ulimit -n 2147483646

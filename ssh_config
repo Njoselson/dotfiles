@@ -1,0 +1,42 @@
+  # ---------- DEV US: standard-1 ----------
+  Host nate_vm
+    ProxyCommand /opt/homebrew/share/google-cloud-sdk/bin/gcloud compute start-iap-tunnel eiq-dev-vm-nathaniel-joselson-standard-1 22 --listen-on-stdin --project eiq-development --zone=us-east4-a -q
+
+  # ---------- STAGING US: standard-1 ----------
+  Host nate_stage_vm
+    ProxyCommand /opt/homebrew/share/google-cloud-sdk/bin/gcloud compute start-iap-tunnel eiq-stg-vm-nathaniel-joselson-standard-1 22 --listen-on-stdin --project eiq-staging --zone=us-east4-a -q
+
+  # ---------- DEV US: gpu-1 ----------
+  Host nate_gpu_vm
+    IdentityFile ~/.ssh/google_compute_engine
+    ProxyCommand /opt/homebrew/share/google-cloud-sdk/bin/gcloud compute start-iap-tunnel eiq-dev-vm-nathaniel-joselson-gpu-1 22 --listen-on-stdin --project eiq-development --zone=us-central1-c -q
+
+  # ---------- DEV US: claims-llm 4xA100 (shared with Karan) ----------
+  Host nate_claims_vm
+    User nathanieljoselson
+    IdentityFile ~/.ssh/google_compute_engine
+    ProxyCommand /opt/homebrew/share/google-cloud-sdk/bin/gcloud compute start-iap-tunnel claims-llm-training-4gpu 22 --listen-on-stdin --project eiq-development --zone=us-central1-f -q
+
+  # ---------- SHARED US: ephemeral app access ----------
+  Host nate_shr_vm
+    IdentityFile ~/.ssh/google_compute_engine
+    ProxyCommand /opt/homebrew/share/google-cloud-sdk/bin/gcloud compute start-iap-tunnel eiq-us-shr-vm-nathaniel-joselson-b569 22 --listen-on-stdin --project eiq-us-shr-developer-vms --zone=us-east4-a -q
+
+  # ---------- DEV CA: e2-highmem-16 (PHI/PII — SunLife CA) ----------
+  Host nate_ca_vm
+    IdentityFile ~/.ssh/google_compute_engine
+    ProxyCommand /opt/homebrew/share/google-cloud-sdk/bin/gcloud compute start-iap-tunnel eiq-ca-dev-vm-nathaniel-joselson-7c17 22 --listen-on-stdin --project eiq-ca-development --zone=northamerica-northeast1-b -q
+
+  # ---------- Shared defaults for all VMs ----------
+  Host nate_*
+    User nathaniel_joselson_evolutioniq_c
+    IdentityFile ~/.ssh/id_rsa
+    ControlMaster auto
+    ControlPersist 4h
+    ControlPath ~/.ssh/cm/%C
+    ServerAliveInterval 30
+    ServerAliveCountMax 6
+    TCPKeepAlive yes
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+
