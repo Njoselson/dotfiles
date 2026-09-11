@@ -11,8 +11,26 @@ set -euo pipefail
 # On Linux: installs Claude Code, vault, Claude Code config (skips Homebrew/Obsidian)
 
 DOTFILES_DIR="$HOME/dotfiles"
-VAULT_DIR="$HOME/obsidian"
 VAULT_REPO="git@github.com:Njoselson/obsidian-vault.git"
+
+# --- Locate the Obsidian vault ---
+# Checked in order; first one that looks like a real vault wins.
+# NOTE: a bare [ -d ] test is not enough — on macOS the filesystem is
+# case-insensitive, so "$HOME/obsidian" can match a ~/Obsidian dotfiles dir
+# that only holds .obsidian.vimrc. Require a vault marker instead.
+VAULT_CANDIDATES=(
+    "$HOME/obsidian"
+    "$HOME/Documents/obsidian"
+)
+VAULT_DIR=""
+for _candidate in "${VAULT_CANDIDATES[@]}"; do
+    if [ -d "$_candidate/_claude" ] || [ -d "$_candidate/.obsidian" ] || [ -d "$_candidate/.git" ]; then
+        VAULT_DIR="$_candidate"
+        break
+    fi
+done
+# No existing vault — use the first candidate as the clone target
+VAULT_DIR="${VAULT_DIR:-${VAULT_CANDIDATES[0]}}"
 DEV_STANDARDS="$HOME/code/eiq/development-standards"
 PLATFORM="$(uname -s)"
 CLAUDE_ONLY=false
@@ -164,7 +182,15 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
 fi
 
 # --- Dotfiles (symlinks) ---
-if [[ "$CLAUDE_ONLY" == false ]]; then
+if [[ "$CLAUDE_ONLY" == false && -d "$HOME/.cfg" ]]; then
+    echo ""
+    echo "=== Dotfiles: SKIPPED ==="
+    echo "  This machine uses the older bare-repo layout (~/.cfg), which checks"
+    echo "  real files into \$HOME. Symlinking them to $DOTFILES_DIR would leave two"
+    echo "  systems both tracking \$HOME, and the next 'config checkout' would fight them."
+    echo "  Update dotfiles with:  config pull"
+    echo "  To migrate to symlinks: remove ~/.cfg first, then re-run."
+elif [[ "$CLAUDE_ONLY" == false ]]; then
     echo ""
     echo "=== Dotfiles (symlinks) ==="
 
@@ -256,6 +282,16 @@ fi
 # --- Claude Code config ---
 echo ""
 echo "=== Claude Code config ==="
+# Older installs symlinked ~/.claude/skills as a whole directory into the vault.
+# The per-skill loop below needs a REAL directory: writing into a dir-symlink
+# would create self-referential links inside the vault's own _claude/skills/.
+# (~/.claude/commands is left alone — nothing below populates it, so a legacy
+# whole-dir symlink there is still doing useful work.)
+if [ -L "$HOME/.claude/skills" ]; then
+    echo "  Replacing legacy whole-dir symlink: ~/.claude/skills"
+    rm "$HOME/.claude/skills"
+fi
+
 mkdir -p "$HOME/.claude/commands" "$HOME/.claude/skills" "$HOME/.claude/rules"
 
 # Project-level .claude symlink: vault tracks config in _claude/ (git-friendly name)
