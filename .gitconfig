@@ -1,7 +1,5 @@
 [user]
-	email = nathaniel.joselson@evolutioniq.com
 	name = Nathaniel Joselson
-	signingkey = /Users/nathanieljoselson/.ssh/id_ed25519.pub
 [alias]
 	lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --decorate=full
 	stoic = !git commit -m \"$(curl -s --max-time 3 https://stoicquotesapi.com/v1/api/quotes/random | jq -r '.body' || echo 'memento mori')\"
