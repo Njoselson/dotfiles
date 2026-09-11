@@ -57,7 +57,10 @@ if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
         fzf \
         fd \
         ripgrep \
-        delta
+        delta \
+        lazygit \
+        hunkdiff \
+        googleworkspace-cli
 
 fi
 
@@ -153,6 +156,11 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
     if ! command -v claude &>/dev/null; then
         npm install -g @anthropic-ai/claude-code
     fi
+
+    echo "==> Installing Operon CLI..."
+    if ! command -v operon &>/dev/null; then
+        npm install --global @stratejya/operon-cli
+    fi
 fi
 
 # --- Dotfiles (symlinks) ---
@@ -231,6 +239,18 @@ else
     echo "  Cloning vault to $VAULT_DIR"
     mkdir -p "$(dirname "$VAULT_DIR")"
     git clone "$VAULT_REPO" "$VAULT_DIR"
+fi
+
+# --- Operon CLI setup ---
+if command -v operon &>/dev/null && [ -d "$VAULT_DIR" ]; then
+    echo ""
+    echo "=== Operon CLI ==="
+    if ! operon health --json &>/dev/null 2>&1; then
+        echo "  Setting up Operon profile for vault..."
+        operon setup --vault "$VAULT_DIR" --name main --default --live
+    else
+        echo "  Already configured"
+    fi
 fi
 
 # --- Claude Code config ---
