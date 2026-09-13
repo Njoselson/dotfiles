@@ -63,22 +63,22 @@ if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
     fi
 
     echo "==> Installing Homebrew packages..."
-    brew install \
-        git \
-        gh \
-        tmux \
-        neovim \
-        pyenv \
-        poetry \
-        node \
-        docker \
-        fzf \
-        fd \
-        ripgrep \
-        delta \
-        lazygit \
-        hunkdiff \
-        googleworkspace-cli
+    # Installed one at a time on purpose: a single bad formula name under
+    # `set -e` would otherwise abort the whole script, silently skipping the
+    # dotfiles, vault, and Claude Code setup below.
+    BREW_PACKAGES=(
+        git gh tmux neovim pyenv pyenv-virtualenv poetry node docker
+        fzf fd ripgrep delta lazygit autossh hunk googleworkspace-cli
+    )
+    for pkg in "${BREW_PACKAGES[@]}"; do
+        if brew list --versions "$pkg" &>/dev/null; then
+            echo "    already installed: $pkg"
+        elif brew install "$pkg" &>/dev/null; then
+            echo "    installed: $pkg"
+        else
+            echo "    WARNING: failed to install $pkg — continuing"
+        fi
+    done
 
 fi
 
@@ -273,7 +273,13 @@ if command -v operon &>/dev/null && [ -d "$VAULT_DIR" ]; then
     echo "=== Operon CLI ==="
     if ! operon health --json &>/dev/null 2>&1; then
         echo "  Setting up Operon profile for vault..."
-        operon setup --vault "$VAULT_DIR" --name main --default --live
+        # Non-fatal: --live needs Obsidian running with the Operon plugin loaded.
+        # Under `set -e` a transport failure here would abort the whole script
+        # before the Claude Code config below ever runs.
+        if ! operon setup --vault "$VAULT_DIR" --name main --default --live; then
+            echo "  WARNING: Operon live setup incomplete (is Obsidian running?)"
+            echo "  Retry later with: operon doctor --live"
+        fi
     else
         echo "  Already configured"
     fi
@@ -282,15 +288,23 @@ fi
 # --- Claude Code config ---
 echo ""
 echo "=== Claude Code config ==="
-# Older installs symlinked ~/.claude/skills as a whole directory into the vault.
-# The per-skill loop below needs a REAL directory: writing into a dir-symlink
-# would create self-referential links inside the vault's own _claude/skills/.
-# (~/.claude/commands is left alone — nothing below populates it, so a legacy
-# whole-dir symlink there is still doing useful work.)
-if [ -L "$HOME/.claude/skills" ]; then
-    echo "  Replacing legacy whole-dir symlink: ~/.claude/skills"
-    rm "$HOME/.claude/skills"
-fi
+# Older installs symlinked ~/.claude/skills and ~/.claude/commands as whole
+# directories into the vault. Both must go before the mkdir below:
+#   - skills: the per-skill loop needs a REAL directory, or it would write
+#     self-referential links inside the vault's own _claude/skills/.
+#   - commands: the vault no longer ships _claude/commands, so that symlink
+#     dangles — and `mkdir -p` on a dangling symlink fails outright with
+#     ENOENT, aborting the rest of this section under `set -e`.
+for legacy in "$HOME/.claude/skills" "$HOME/.claude/commands"; do
+    if [ -L "$legacy" ]; then
+        if [ -d "$legacy" ]; then
+            echo "  Replacing legacy whole-dir symlink: $legacy"
+        else
+            echo "  Removing dangling symlink: $legacy"
+        fi
+        rm "$legacy"
+    fi
+done
 
 mkdir -p "$HOME/.claude/commands" "$HOME/.claude/skills" "$HOME/.claude/rules"
 
