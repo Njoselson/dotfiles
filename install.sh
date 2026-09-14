@@ -179,6 +179,11 @@ if [[ "$CLAUDE_ONLY" == false ]]; then
     if ! command -v operon &>/dev/null; then
         npm install --global @stratejya/operon-cli
     fi
+
+    echo "==> Installing markdownlint..."
+    if ! command -v markdownlint &>/dev/null; then
+        npm install --global markdownlint-cli
+    fi
 fi
 
 # --- Dotfiles (symlinks) ---
