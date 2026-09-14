@@ -229,9 +229,6 @@ elif [[ "$CLAUDE_ONLY" == false ]]; then
         mkdir -p "$HOME/.config/hunk"
         link "$DOTFILES_DIR/hunk/config.toml" "$HOME/.config/hunk/config.toml"
     fi
-    if [ -d "$DOTFILES_DIR/Obsidian" ]; then
-        link "$DOTFILES_DIR/Obsidian" "$HOME/.config/obsidian"
-    fi
 
     # Create .zshrc.local template if it doesn't exist
     if [ ! -f "$HOME/.zshrc.local" ]; then
