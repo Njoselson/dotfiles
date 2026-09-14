@@ -269,6 +269,22 @@ else
     git clone "$VAULT_REPO" "$VAULT_DIR"
 fi
 
+# --- Obsidian vimrc ---
+# The Vimrc Support plugin reads .obsidian.vimrc from the vault root. The file
+# lives in dotfiles (~/dotfiles/Obsidian, or ~/Obsidian in the bare-repo
+# layout); the vault gitignores it because each machine's copy is a symlink.
+# Skip when that folder IS the vault (macOS is case-insensitive: ~/Obsidian
+# can be ~/obsidian), or link() would replace the file with a link to itself.
+for _vimrc in "$DOTFILES_DIR/Obsidian/.obsidian.vimrc" "$HOME/Obsidian/.obsidian.vimrc"; do
+    if [ -f "$_vimrc" ] && [ -d "$VAULT_DIR" ] \
+        && [ "$(cd "$(dirname "$_vimrc")" && pwd -P)" != "$(cd "$VAULT_DIR" && pwd -P)" ]; then
+        echo ""
+        echo "=== Obsidian vimrc ==="
+        link "$_vimrc" "$VAULT_DIR/.obsidian.vimrc"
+        break
+    fi
+done
+
 # --- Operon CLI setup ---
 if command -v operon &>/dev/null && [ -d "$VAULT_DIR" ]; then
     echo ""
