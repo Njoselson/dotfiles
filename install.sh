@@ -325,6 +325,16 @@ if [ -d "$VAULT_DIR/_claude/skills" ]; then
     done
 fi
 
+# Vault rules (cross-cutting agent behavior — loaded in every session, every repo;
+# the vault's own CLAUDE.md only loads in sessions started inside the vault)
+if [ -d "$VAULT_DIR/_claude/rules" ]; then
+    echo "  Rules (vault):"
+    for rule in "$VAULT_DIR/_claude/rules"/*.md; do
+        [ -f "$rule" ] || continue
+        link "$rule" "$HOME/.claude/rules/$(basename "$rule")"
+    done
+fi
+
 # Dev-standards rules (PR format, Jira workflow, validation, etc.)
 if [ -d "$DEV_STANDARDS/.claude/rules" ]; then
     echo "  Rules (dev-standards):"
