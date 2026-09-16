@@ -378,6 +378,36 @@ if [ -d "$DEV_STANDARDS" ]; then
     done
 fi
 
+# Claude Code user settings: merge read-only permissions into ~/.claude/settings.json
+CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+echo "  Permissions:"
+if [ ! -f "$CLAUDE_SETTINGS" ]; then
+    echo '{}' > "$CLAUDE_SETTINGS"
+fi
+# The read-only allowlist itself lives in the vault, not here: dispatch.sh needs
+# the same list, and a second copy in this file would drift from it silently.
+# The merge is additive — machine-local rules in settings.json are never removed.
+PERMS_FILE="$VAULT_DIR/system/claude-permissions.json"
+if [ ! -f "$PERMS_FILE" ]; then
+    echo "    SKIP: $PERMS_FILE not found (vault not cloned yet?)"
+else
+    python3 -c "
+import json, sys
+path, perms_file = sys.argv[1:3]
+with open(perms_file) as f:
+    perms = json.load(f)['allow']
+with open(path) as f:
+    cfg = json.load(f)
+allow = cfg.setdefault('permissions', {}).setdefault('allow', [])
+added = [p for p in perms if p not in allow]
+allow.extend(added)
+with open(path, 'w') as f:
+    json.dump(cfg, f, indent=2)
+    f.write('\n')
+print(f'    {len(added)} new permissions added, {len(allow)} total')
+" "$CLAUDE_SETTINGS" "$PERMS_FILE"
+fi
+
 # Memory: symlink Claude's auto-memory path to vault memory
 if [ -d "$VAULT_DIR/_claude/memory" ]; then
     VAULT_ENCODED=$(echo "$VAULT_DIR" | sed 's|^/||; s|/|-|g')
