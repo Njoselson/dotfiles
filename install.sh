@@ -408,6 +408,34 @@ print(f'    {len(added)} new permissions added, {len(allow)} total')
 " "$CLAUDE_SETTINGS" "$PERMS_FILE"
 fi
 
+# SessionStart hook: pulls dotfiles + vault and re-runs the permissions merge
+# at the start of every Claude Code session, so machines stay in sync without
+# a manual install.sh re-run. Additive — other SessionStart hooks are kept.
+SYNC_HOOK="$HOME/dotfiles/.claude/hooks/sync-repos.sh"
+if [ -f "$SYNC_HOOK" ]; then
+    echo "  SessionStart hook:"
+    python3 -c "
+import json, sys
+path, cmd = sys.argv[1:3]
+with open(path) as f:
+    cfg = json.load(f)
+hooks = cfg.setdefault('hooks', {}).setdefault('SessionStart', [])
+already = any(
+    h.get('command') == cmd
+    for entry in hooks
+    for h in entry.get('hooks', [])
+)
+if already:
+    print('    already present')
+else:
+    hooks.append({'hooks': [{'type': 'command', 'command': cmd}]})
+    with open(path, 'w') as f:
+        json.dump(cfg, f, indent=2)
+        f.write('\n')
+    print('    added')
+" "$CLAUDE_SETTINGS" "~/dotfiles/.claude/hooks/sync-repos.sh"
+fi
+
 # Memory: symlink Claude's auto-memory path to vault memory
 if [ -d "$VAULT_DIR/_claude/memory" ]; then
     VAULT_ENCODED=$(echo "$VAULT_DIR" | sed 's|^/||; s|/|-|g')

@@ -139,6 +139,28 @@ fi
 # --- uv ---
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
+# --- Claude Code: sync vault permissions into global settings ---
+() {
+    local vault perms cfg
+    for vault in "$HOME/obsidian" "$HOME/Documents/obsidian"; do
+        perms="$vault/system/claude-permissions.json"
+        [ -f "$perms" ] && break || perms=""
+    done
+    cfg="$HOME/.claude/settings.json"
+    [[ -z "$perms" || ! -f "$cfg" ]] && return
+    python3 -c '
+import json,sys
+p,c=sys.argv[1:3]
+with open(p) as f: want=json.load(f)["allow"]
+with open(c) as f: cfg=json.load(f)
+have=cfg.setdefault("permissions",{}).setdefault("allow",[])
+added=[r for r in want if r not in have]
+if not added: sys.exit(0)
+have.extend(added)
+with open(c,"w") as f: json.dump(cfg,f,indent=2); f.write("\n")
+' "$perms" "$cfg" 2>/dev/null
+}
+
 # --- Local overrides (secrets, machine-specific) ---
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 [[ "$(uname)" == "Darwin" ]] && ulimit -n 2147483646
