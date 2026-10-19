@@ -67,16 +67,26 @@ else
     fail "vault not found at ~/obsidian or ~/Documents/obsidian"
 fi
 
-echo "=== SessionStart hook ==="
 CFG="$HOME/.claude/settings.json"
-if [ -f "$CFG" ]; then
+DOTFILES_HOOKS=(
+    "SessionStart:sync-repos.sh"
+    "PermissionRequest:log-permission-request.sh"
+)
+for entry in "${DOTFILES_HOOKS[@]}"; do
+    hook_type="${entry%%:*}"
+    script_name="${entry#*:}"
+    echo "=== $hook_type hook ==="
+    if [ ! -f "$CFG" ]; then
+        fail "$CFG does not exist"
+        continue
+    fi
     hook_cmd=$(python3 -c "
 import json
 try:
     cfg = json.load(open('$CFG'))
-    for entry in cfg.get('hooks', {}).get('SessionStart', []):
-        for h in entry.get('hooks', []):
-            if 'sync-repos.sh' in h.get('command', ''):
+    for e in cfg.get('hooks', {}).get('$hook_type', []):
+        for h in e.get('hooks', []):
+            if '$script_name' in h.get('command', ''):
                 print(h['command'])
                 raise SystemExit
 except Exception:
@@ -85,16 +95,14 @@ except Exception:
     if [ -n "$hook_cmd" ]; then
         resolved="${hook_cmd/#\~/$HOME}"
         if [ -f "$resolved" ]; then
-            ok "SessionStart hook registered: $hook_cmd (target exists)"
+            ok "$hook_type hook registered: $hook_cmd (target exists)"
         else
-            fail "SessionStart hook registered but target missing: $hook_cmd"
+            fail "$hook_type hook registered but target missing: $hook_cmd"
         fi
     else
-        fail "no SessionStart hook for sync-repos.sh in $CFG — run: $INSTALL_CMD"
+        fail "no $hook_type hook for $script_name in $CFG — run: $INSTALL_CMD"
     fi
-else
-    fail "$CFG does not exist"
-fi
+done
 
 echo "=== Permissions merge ==="
 if [ -n "$VAULT" ] && [ -f "$VAULT/system/claude-permissions.json" ] && [ -f "$CFG" ]; then

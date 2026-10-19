@@ -428,30 +428,35 @@ print(f'    {len(added)} new permissions added, {len(allow)} total')
 " "$CLAUDE_SETTINGS" "$PERMS_FILE"
 fi
 
-# SessionStart hook: pulls dotfiles + vault and re-runs the permissions merge
-# at the start of every Claude Code session, so machines stay in sync without
-# a manual install.sh re-run. Additive — other SessionStart hooks are kept.
-#
+# Claude Code hooks shipped from dotfiles: pairs of "hook type:script name".
 # Path differs by layout: the symlink layout keeps dotfiles at ~/dotfiles, so
-# the script lives at ~/dotfiles/.claude/hooks/sync-repos.sh. The bare-repo
-# layout (~/.cfg) checks real files straight into $HOME — there is no
-# ~/dotfiles directory at all, so the same repo-relative path resolves to
-# ~/.claude/hooks/sync-repos.sh instead.
-if [ -d "$HOME/.cfg" ]; then
-    SYNC_HOOK_CMD="~/.claude/hooks/sync-repos.sh"
-    SYNC_HOOK_CHECK="$HOME/.claude/hooks/sync-repos.sh"
-else
-    SYNC_HOOK_CMD="~/dotfiles/.claude/hooks/sync-repos.sh"
-    SYNC_HOOK_CHECK="$HOME/dotfiles/.claude/hooks/sync-repos.sh"
-fi
-if [ -f "$SYNC_HOOK_CHECK" ]; then
-    echo "  SessionStart hook:"
-    python3 -c "
+# a script lives at ~/dotfiles/.claude/hooks/<name>. The bare-repo layout
+# (~/.cfg) checks real files straight into $HOME — there is no ~/dotfiles
+# directory at all, so the same repo-relative path resolves to
+# ~/.claude/hooks/<name> instead. Additive — other hooks of the same type
+# are kept.
+DOTFILES_HOOKS=(
+    "SessionStart:sync-repos.sh"
+    "PermissionRequest:log-permission-request.sh"
+)
+for entry in "${DOTFILES_HOOKS[@]}"; do
+    hook_type="${entry%%:*}"
+    script_name="${entry#*:}"
+    if [ -d "$HOME/.cfg" ]; then
+        HOOK_CMD="~/.claude/hooks/$script_name"
+        HOOK_CHECK="$HOME/.claude/hooks/$script_name"
+    else
+        HOOK_CMD="~/dotfiles/.claude/hooks/$script_name"
+        HOOK_CHECK="$HOME/dotfiles/.claude/hooks/$script_name"
+    fi
+    if [ -f "$HOOK_CHECK" ]; then
+        echo "  $hook_type hook:"
+        python3 -c "
 import json, sys
-path, cmd = sys.argv[1:3]
+path, hook_type, cmd = sys.argv[1:4]
 with open(path) as f:
     cfg = json.load(f)
-hooks = cfg.setdefault('hooks', {}).setdefault('SessionStart', [])
+hooks = cfg.setdefault('hooks', {}).setdefault(hook_type, [])
 already = any(
     h.get('command') == cmd
     for entry in hooks
@@ -465,10 +470,11 @@ else:
         json.dump(cfg, f, indent=2)
         f.write('\n')
     print('    added')
-" "$CLAUDE_SETTINGS" "$SYNC_HOOK_CMD"
-else
-    echo "  SessionStart hook: SKIP ($SYNC_HOOK_CHECK not found — pull dotfiles first)"
-fi
+" "$CLAUDE_SETTINGS" "$hook_type" "$HOOK_CMD"
+    else
+        echo "  $hook_type hook: SKIP ($HOOK_CHECK not found — pull dotfiles first)"
+    fi
+done
 
 # Memory: symlink Claude's auto-memory path to vault memory
 if [ -d "$VAULT_DIR/_claude/memory" ]; then
