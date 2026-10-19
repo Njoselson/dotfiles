@@ -52,6 +52,25 @@ link() {
     echo "    $dst -> $src"
 }
 
+# Auto-commit append-only log/registry files (listed in the repo's own
+# .gitattributes as merge=union) so they never block a pull as "uncommitted".
+# Real work-in-progress on other files still blocks the pull normally.
+autocommit_union_paths() {
+    local dir="$1"
+    local attrs="$dir/.gitattributes"
+    [ -f "$attrs" ] || return 0
+    local dirty=()
+    local path
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        [ -f "$dir/$path" ] || continue
+        git -C "$dir" diff --quiet -- "$path" 2>/dev/null || dirty+=("$path")
+    done < <(grep -E 'merge=union' "$attrs" | awk '{print $1}')
+    [ ${#dirty[@]} -eq 0 ] && return 0
+    git -C "$dir" add -- "${dirty[@]}" 2>/dev/null || return 0
+    git -C "$dir" commit --quiet -m "chore: sync local observation logs" -- "${dirty[@]}" 2>/dev/null || true
+}
+
 # --- Mac-only setup ---
 if [[ "$PLATFORM" == "Darwin" && "$CLAUDE_ONLY" == false ]]; then
     echo "==> Checking for Xcode Command Line Tools..."
@@ -259,7 +278,8 @@ echo ""
 echo "=== Obsidian vault ==="
 if [ -d "$VAULT_DIR/.git" ]; then
     echo "  Already cloned at $VAULT_DIR — pulling latest"
-    git -C "$VAULT_DIR" pull --ff-only
+    autocommit_union_paths "$VAULT_DIR"
+    git -C "$VAULT_DIR" pull --no-rebase || echo "    WARNING: vault pull failed (uncommitted changes?) — continuing"
 elif [ -d "$VAULT_DIR" ]; then
     echo "  $VAULT_DIR exists but is not a git repo — skipping vault clone"
     echo "  (init it manually or remove the directory first)"
