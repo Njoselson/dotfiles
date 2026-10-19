@@ -431,8 +431,20 @@ fi
 # SessionStart hook: pulls dotfiles + vault and re-runs the permissions merge
 # at the start of every Claude Code session, so machines stay in sync without
 # a manual install.sh re-run. Additive — other SessionStart hooks are kept.
-SYNC_HOOK="$HOME/dotfiles/.claude/hooks/sync-repos.sh"
-if [ -f "$SYNC_HOOK" ]; then
+#
+# Path differs by layout: the symlink layout keeps dotfiles at ~/dotfiles, so
+# the script lives at ~/dotfiles/.claude/hooks/sync-repos.sh. The bare-repo
+# layout (~/.cfg) checks real files straight into $HOME — there is no
+# ~/dotfiles directory at all, so the same repo-relative path resolves to
+# ~/.claude/hooks/sync-repos.sh instead.
+if [ -d "$HOME/.cfg" ]; then
+    SYNC_HOOK_CMD="~/.claude/hooks/sync-repos.sh"
+    SYNC_HOOK_CHECK="$HOME/.claude/hooks/sync-repos.sh"
+else
+    SYNC_HOOK_CMD="~/dotfiles/.claude/hooks/sync-repos.sh"
+    SYNC_HOOK_CHECK="$HOME/dotfiles/.claude/hooks/sync-repos.sh"
+fi
+if [ -f "$SYNC_HOOK_CHECK" ]; then
     echo "  SessionStart hook:"
     python3 -c "
 import json, sys
@@ -453,7 +465,9 @@ else:
         json.dump(cfg, f, indent=2)
         f.write('\n')
     print('    added')
-" "$CLAUDE_SETTINGS" "~/dotfiles/.claude/hooks/sync-repos.sh"
+" "$CLAUDE_SETTINGS" "$SYNC_HOOK_CMD"
+else
+    echo "  SessionStart hook: SKIP ($SYNC_HOOK_CHECK not found — pull dotfiles first)"
 fi
 
 # Memory: symlink Claude's auto-memory path to vault memory

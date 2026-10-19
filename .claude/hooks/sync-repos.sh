@@ -4,39 +4,73 @@
 # risking a clobber or a merge conflict mid-session.
 set -euo pipefail
 
+# Dispatches git to the right invocation for a repo. "bare" is the special
+# case for the ~/.cfg bare-repo dotfiles layout (git-dir ~/.cfg, work-tree
+# $HOME — real files checked out straight into $HOME, no ~/dotfiles dir).
+git_cmd() {
+    local repo="$1"; shift
+    if [ "$repo" = "bare" ]; then
+        git --git-dir="$HOME/.cfg" --work-tree="$HOME" "$@"
+    else
+        git -C "$repo" "$@"
+    fi
+}
+
+# Resolves a repo path to the directory .gitattributes/file-existence checks
+# should use — $HOME for the bare layout, the repo dir otherwise.
+work_tree_of() {
+    [ "$1" = "bare" ] && echo "$HOME" || echo "$1"
+}
+
+repo_exists() {
+    local repo="$1"
+    if [ "$repo" = "bare" ]; then
+        [ -d "$HOME/.cfg" ]
+    else
+        [ -d "$repo/.git" ]
+    fi
+}
+
 # Auto-commit append-only log/registry files (listed in the vault's
 # .gitattributes as merge=union) so they never count as "uncommitted" and
 # block a pull. Other dirty files still correctly block the pull below.
 autocommit_union_paths() {
-    local dir="$1"
-    local attrs="$dir/.gitattributes"
+    local repo="$1"
+    local wt; wt="$(work_tree_of "$repo")"
+    local attrs="$wt/.gitattributes"
     [ -f "$attrs" ] || return 0
     local dirty=()
     local path
     while IFS= read -r path; do
         [ -n "$path" ] || continue
-        [ -f "$dir/$path" ] || continue
-        git -C "$dir" diff --quiet -- "$path" 2>/dev/null || dirty+=("$path")
+        [ -f "$wt/$path" ] || continue
+        git_cmd "$repo" diff --quiet -- "$path" 2>/dev/null || dirty+=("$path")
     done < <(grep -E 'merge=union' "$attrs" | awk '{print $1}')
     [ ${#dirty[@]} -eq 0 ] && return 0
-    git -C "$dir" add -- "${dirty[@]}" 2>/dev/null || return 0
-    git -C "$dir" commit --quiet -m "chore: sync local observation logs" -- "${dirty[@]}" 2>/dev/null || true
+    git_cmd "$repo" add -- "${dirty[@]}" 2>/dev/null || return 0
+    git_cmd "$repo" commit --quiet -m "chore: sync local observation logs" -- "${dirty[@]}" 2>/dev/null || true
 }
 
 pull_if_clean() {
-    local dir="$1"
-    [ -d "$dir/.git" ] || return 0
-    autocommit_union_paths "$dir"
+    local repo="$1"
+    repo_exists "$repo" || return 0
+    autocommit_union_paths "$repo"
     # Skip if there are still uncommitted changes (real work in progress)
-    git -C "$dir" diff --quiet 2>/dev/null || return 0
-    git -C "$dir" diff --cached --quiet 2>/dev/null || return 0
+    git_cmd "$repo" diff --quiet 2>/dev/null || return 0
+    git_cmd "$repo" diff --cached --quiet 2>/dev/null || return 0
     # Plain pull (not --ff-only): fast-forwards when possible, and falls back
     # to a real merge — using the union driver for the paths above — when
     # another machine committed to the same log files.
-    git -C "$dir" pull --no-rebase --quiet 2>/dev/null || true
+    git_cmd "$repo" pull --no-rebase --quiet 2>/dev/null || true
 }
 
-pull_if_clean "$HOME/dotfiles"
+# Dotfiles: bare-repo layout (~/.cfg) takes precedence if both somehow exist,
+# matching install.sh's own detection.
+if [ -d "$HOME/.cfg" ]; then
+    pull_if_clean bare
+else
+    pull_if_clean "$HOME/dotfiles"
+fi
 
 # Auto-detect vault path (same logic as install.sh)
 for vault in "$HOME/obsidian" "$HOME/Documents/obsidian"; do
