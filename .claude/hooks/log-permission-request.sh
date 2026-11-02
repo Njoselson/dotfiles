@@ -19,6 +19,7 @@ except Exception:
     sys.exit(0)
 entry = {
     'ts': datetime.datetime.now().astimezone().isoformat(),
+    'session_id': data.get('session_id', ''),
     'tool_name': data.get('tool_name'),
     'command': data.get('tool_input', {}).get('command', ''),
     'file_path': data.get('tool_input', {}).get('file_path', ''),
